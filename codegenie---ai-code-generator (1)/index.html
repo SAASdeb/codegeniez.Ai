@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeGenie - AI Code Generator</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <!-- JSZip for Downloading Files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <!-- LZString for URL Compression -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Import Map for Google GenAI -->
+    <script type="importmap">
+      {
+        "imports": {
+          "@google/genai": "https://esm.run/@google/genai"
+        }
+      }
+    </script>
+
+    <!-- 1. API CONFIGURATION -->
+    <script>
+      // =================================================================
+      // GEN AI KEY
+      // =================================================================
+      window.API_KEY = "AIzaSyCj3ltA1aPlSauo56CDyX4zDbGvFLHHyoc"; 
+    </script>
+
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              mono: ['Fira Code', 'monospace'],
+            },
+            colors: {
+              gray: {
+                750: '#2d3748',
+                850: '#1a202c',
+                950: '#0d1117',
+              }
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.5s ease-out forwards',
+              'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              }
+            }
+          },
+        },
+      }
+    </script>
+
+    <style>
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0d1117;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #2d3748;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #4a5568;
+      }
+
+      /* Markdown Styles */
+      .markdown-body p { margin-bottom: 1rem; line-height: 1.6; color: #d1d5db; }
+      .markdown-body h1, .markdown-body h2, .markdown-body h3 { color: white; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+      .markdown-body h1 { font-size: 1.5rem; border-bottom: 1px solid #374151; padding-bottom: 0.5rem; }
+      .markdown-body h2 { font-size: 1.25rem; }
+      .markdown-body ul, .markdown-body ol { margin-bottom: 1rem; padding-left: 1.5rem; color: #d1d5db; }
+      .markdown-body ul { list-style-type: disc; }
+      .markdown-body ol { list-style-type: decimal; }
+      .markdown-body code { font-family: 'Fira Code', monospace; background: #1f2937; padding: 0.2em 0.4em; border-radius: 0.25rem; font-size: 0.875em; color: #f472b6; }
+      .markdown-body pre { background: #1f2937 !important; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 1rem; border: 1px solid #374151; }
+      .markdown-body pre code { background: transparent; padding: 0; color: inherit; font-size: 0.9em; }
+      .markdown-body a { color: #60a5fa; text-decoration: none; }
+      .markdown-body a:hover { text-decoration: underline; }
+      
+      .hidden { display: none !important; }
+      .opacity-0 { opacity: 0; }
+      .transition-opacity { transition: opacity 0.5s ease-in-out; }
+    </style>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="bg-gray-950 text-gray-100 antialiased h-screen overflow-hidden relative font-sans">
+
+    <!-- ================================================================= -->
+    <!-- MAIN APP INTERFACE -->
+    <!-- ================================================================= -->
+    <div id="app-interface" class="flex flex-col h-full w-full transition-opacity duration-700">
+        <!-- Header -->
+        <header class="flex-none h-16 border-b border-gray-800 bg-gray-950/80 backdrop-blur-md flex items-center justify-between px-6 z-10">
+            <div class="flex items-center gap-3">
+                <div class="bg-gradient-to-br from-blue-600 to-green-500 p-2 rounded-lg shadow-lg shadow-blue-900/20">
+                    <i data-lucide="sparkles" class="text-white w-5 h-5"></i>
+                </div>
+                <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-green-400 tracking-tight">
+                    CodeGenie
+                </h1>
+            </div>
+            <div class="flex items-center gap-3">
+                 <button id="download-btn" class="hidden flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-900 border border-gray-800 hover:bg-gray-800 hover:text-white text-gray-400 transition-all text-sm font-medium group">
+                    <i data-lucide="download" class="w-4 h-4 group-hover:text-blue-400 transition-colors"></i>
+                    <span>Download Files</span>
+                 </button>
+                 <button id="preview-btn" class="hidden flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-900 border border-gray-800 hover:bg-gray-800 hover:text-white text-gray-400 transition-all text-sm font-medium group">
+                    <i data-lucide="eye" class="w-4 h-4 group-hover:text-blue-400 transition-colors"></i>
+                    <span>Preview</span>
+                 </button>
+                 <button id="new-chat-btn" class="hidden flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-900 border border-gray-800 hover:bg-gray-800 hover:text-white text-gray-400 transition-all text-sm font-medium group">
+                    <i data-lucide="plus" class="w-4 h-4 group-hover:text-blue-400 transition-colors"></i>
+                    <span>New Chat</span>
+                 </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-hidden flex flex-col relative">
+            <div id="chat-container" class="flex-1 overflow-y-auto px-4 py-6 scroll-smooth">
+                <div class="max-w-4xl mx-auto min-h-full flex flex-col pb-4">
+                    
+                    <!-- Empty State -->
+                    <div id="empty-state" class="flex flex-col items-center justify-center flex-1 text-center p-8 opacity-80 select-none animate-fade-in">
+                        <div class="relative mb-8 group">
+                            <div class="absolute -inset-4 bg-gradient-to-r from-blue-600 to-green-500 rounded-full opacity-20 blur-xl animate-pulse-slow"></div>
+                            <div class="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-2xl relative group-hover:scale-105 transition-transform duration-300">
+                                <i data-lucide="code-2" class="w-16 h-16 text-blue-400"></i>
+                            </div>
+                            <div class="absolute -bottom-2 -right-2 bg-green-500 p-2 rounded-full border-4 border-gray-950 shadow-lg">
+                                <i data-lucide="sparkles" class="w-5 h-5 text-white"></i>
+                            </div>
+                        </div>
+                        
+                        <h1 class="text-4xl font-bold text-white mb-4 tracking-tight">CodeGenie</h1>
+                        <p class="text-gray-400 max-w-md mb-10 leading-relaxed text-lg">
+                            Expert Backend & Pure Vanilla JS generator.
+                            <br />
+                            <span class="text-base text-blue-400/80 font-mono mt-2 block">No Frameworks. No TypeScript. Just Code.</span>
+                        </p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-2xl w-full text-left">
+                            <div class="bg-gray-900/50 border border-gray-800 p-5 rounded-xl hover:border-blue-500/30 hover:bg-gray-900 transition-all cursor-default">
+                                <div class="flex items-center gap-3 mb-2 text-blue-400">
+                                    <i data-lucide="server" class="w-5 h-5"></i>
+                                    <span class="font-semibold text-lg">Backend Systems</span>
+                                </div>
+                                <p class="text-sm text-gray-500 leading-relaxed">
+                                    Node.js, Python, SQL. Robust APIs and server logic with setup guides.
+                                </p>
+                            </div>
+                            
+                            <div class="bg-gray-900/50 border border-gray-800 p-5 rounded-xl hover:border-green-500/30 hover:bg-gray-900 transition-all cursor-default">
+                                <div class="flex items-center gap-3 mb-2 text-green-400">
+                                    <i data-lucide="file-code" class="w-5 h-5"></i>
+                                    <span class="font-semibold text-lg">Pure Frontend</span>
+                                </div>
+                                <p class="text-sm text-gray-500 leading-relaxed">
+                                    HTML, CSS, JS. No build steps, no .tsx, just ready-to-run files.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Messages Area -->
+                    <div id="messages-list" class="space-y-8 pb-4 hidden"></div>
+
+                    <!-- Loading Indicator -->
+                    <div id="loading-indicator" class="hidden flex gap-4 mt-4 animate-fade-in">
+                        <div class="flex-none w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-green-500 flex items-center justify-center animate-pulse">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-white"></i>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-2xl rounded-tl-sm px-6 py-4 flex items-center gap-3 shadow-md">
+                            <i data-lucide="loader-2" class="animate-spin text-blue-400 w-5 h-5"></i>
+                            <span class="text-gray-400 text-sm font-medium">Writing code...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="flex-none p-4 bg-gray-950 border-t border-gray-800 z-20">
+                <div class="max-w-3xl mx-auto space-y-4">
+                    
+                    <div class="flex justify-center">
+                        <div class="flex items-center gap-2 p-1 bg-gray-900 rounded-lg border border-gray-800 w-fit shadow-sm">
+                            <button id="mode-expert" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-all bg-blue-600/20 text-blue-300 border border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.15)]">
+                                <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+                                <span>Expert Code (Flash)</span>
+                            </button>
+                            
+                            <button id="mode-search" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-all text-gray-400 hover:text-gray-200 hover:bg-gray-800">
+                                <i data-lucide="globe" class="w-3.5 h-3.5"></i>
+                                <span>Web Research (Flash)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="relative group">
+                        <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-green-500 rounded-xl opacity-30 group-hover:opacity-60 transition duration-500 blur"></div>
+                        <div class="relative flex items-end gap-2 bg-gray-900 p-2 rounded-xl border border-gray-800 shadow-xl">
+                            <textarea
+                                id="prompt-input"
+                                placeholder="Ask for a Python API or a pure HTML/CSS login page..."
+                                class="w-full bg-transparent text-gray-100 placeholder-gray-500 text-base p-3 focus:outline-none resize-none max-h-[200px] min-h-[50px] scrollbar-hide font-sans"
+                                rows="1"
+                            ></textarea>
+                            <button
+                                id="send-btn"
+                                type="button"
+                                class="flex-none p-3 rounded-lg mb-0.5 transition-all duration-200 bg-gray-800 text-gray-600 cursor-not-allowed"
+                                disabled
+                            >
+                                <i data-lucide="send" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-center text-xs text-gray-600 font-medium">
+                        Generating <span id="mode-text">expert</span> Backend and Vanilla JS solutions.
+                    </p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- PREVIEW MODAL -->
+    <div id="preview-modal" class="fixed inset-0 z-50 hidden bg-gray-950/95 backdrop-blur-sm flex flex-col transition-opacity duration-300 opacity-0">
+        <div class="flex-none h-14 flex items-center justify-between px-6 border-b border-gray-800 bg-gray-900">
+            <div class="flex items-center gap-3">
+                <div class="bg-gray-800 p-1.5 rounded-md">
+                    <i data-lucide="layout" class="w-4 h-4 text-blue-400"></i>
+                </div>
+                <h2 class="text-white font-semibold text-sm">Live Preview</h2>
+            </div>
+            <button id="close-preview-btn" class="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-800 rounded-full">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <div class="flex-1 bg-white relative w-full h-full">
+             <iframe id="preview-frame" class="w-full h-full border-0" sandbox="allow-scripts allow-modals allow-forms allow-popups allow-same-origin"></iframe>
+        </div>
+    </div>
+
+    <!-- App Logic -->
+    <script type="module">
+        // -----------------------------------------------------------------------------
+        // STATE MANAGEMENT & DOM ELEMENTS
+        // -----------------------------------------------------------------------------
+        let useSearch = false;
+        let isLoading = false;
+        
+        // Chat History State
+        let chatSession = null;
+        let currentSessionMode = null; // 'expert' or 'search'
+        let messageHistory = []; // Raw message history
+
+        // DOM Elements
+        const promptInput = document.getElementById('prompt-input');
+        const sendBtn = document.getElementById('send-btn');
+        const messagesList = document.getElementById('messages-list');
+        const emptyState = document.getElementById('empty-state');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const chatContainer = document.getElementById('chat-container');
+        const newChatBtn = document.getElementById('new-chat-btn');
+        const previewBtn = document.getElementById('preview-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const previewModal = document.getElementById('preview-modal');
+        const previewFrame = document.getElementById('preview-frame');
+        const closePreviewBtn = document.getElementById('close-preview-btn');
+        const modeExpertBtn = document.getElementById('mode-expert');
+        const modeSearchBtn = document.getElementById('mode-search');
+        const modeText = document.getElementById('mode-text');
+
+        // -----------------------------------------------------------------------------
+        // INITIALIZATION
+        // -----------------------------------------------------------------------------
+        
+        window.onload = () => {
+             // 1. Check Icons
+             if (window.lucide) {
+                window.lucide.createIcons();
+            }
+
+            // 2. Setup Input
+            if (promptInput) {
+                promptInput.value = '';
+                updateSendButton();
+            }
+
+            // 3. Check for Shared Code in URL
+            const params = new URLSearchParams(window.location.search);
+            const shareData = params.get('share');
+            if (shareData && window.LZString) {
+                try {
+                    const decompressed = window.LZString.decompressFromEncodedURIComponent(shareData);
+                    if (decompressed) {
+                        const data = JSON.parse(decompressed);
+                        // Reconstruct markdown
+                        const markdown = "```" + (data.lang || '') + "\n" + data.code + "\n```";
+                        
+                        // UI Setup
+                        if (emptyState) emptyState.classList.add('hidden');
+                        if (messagesList) messagesList.classList.remove('hidden');
+                        if (newChatBtn) newChatBtn.classList.remove('hidden');
+                        
+                        // Append Message
+                        appendMessage('model', "**Shared Snippet**\n\n" + markdown);
+                    }
+                } catch (e) {
+                    console.error("Failed to load shared code", e);
+                }
+            }
+        };
+
+        // -----------------------------------------------------------------------------
+        // UI LOGIC (Chat)
+        // -----------------------------------------------------------------------------
+
+        if (promptInput) {
+            promptInput.addEventListener('input', function() {
+                // Auto-resize textarea
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+                
+                updateSendButton();
+            });
+
+            promptInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit();
+                }
+            });
+        }
+
+        if (sendBtn) {
+            sendBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                handleSubmit();
+            });
+        }
+
+        function updateSendButton() {
+            if (!promptInput || !sendBtn) return;
+            
+            const hasText = promptInput.value.trim().length > 0;
+            const disabled = !hasText || isLoading;
+            
+            sendBtn.disabled = disabled;
+            
+            if (disabled) {
+                sendBtn.className = "flex-none p-3 rounded-lg mb-0.5 transition-all duration-200 bg-gray-800 text-gray-600 cursor-not-allowed";
+            } else {
+                sendBtn.className = "flex-none p-3 rounded-lg mb-0.5 transition-all duration-200 bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-900/20 cursor-pointer";
+            }
+        }
+
+        // -----------------------------------------------------------------------------
+        // PREVIEW LOGIC
+        // -----------------------------------------------------------------------------
+
+        function togglePreviewButton(show) {
+            if (!previewBtn) return;
+            if (show) {
+                previewBtn.classList.remove('hidden');
+            } else {
+                previewBtn.classList.add('hidden');
+            }
+        }
+        
+        function toggleDownloadButton(show) {
+            if (!downloadBtn) return;
+            if (show) {
+                downloadBtn.classList.remove('hidden');
+            } else {
+                downloadBtn.classList.add('hidden');
+            }
+        }
+
+        function openPreview() {
+            // Extract code from chat
+            const { html, css, js } = getLatestWebCode();
+            
+            if (!html && !js && !css) {
+                alert("No previewable code found.");
+                return;
+            }
+
+            // Construct document
+            const fullHtml = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>${css || ''}</style>
+                </head>
+                <body>
+                    ${html || ''}
+                    <script>${js || ''}<\/script>
+                <script type="module" src="/index.tsx"></script>
+</body>
+                </html>
+            `;
+
+            // Inject into iframe
+            previewFrame.srcdoc = fullHtml;
+            
+            // Show Modal
+            previewModal.classList.remove('hidden');
+            // Trigger reflow for transition
+            void previewModal.offsetWidth;
+            previewModal.classList.remove('opacity-0');
+        }
+
+        function closePreview() {
+            previewModal.classList.add('opacity-0');
+            setTimeout(() => {
+                previewModal.classList.add('hidden');
+                previewFrame.srcdoc = ''; // Clear iframe
+            }, 300);
+        }
+
+        if (previewBtn) previewBtn.addEventListener('click', openPreview);
+        if (closePreviewBtn) closePreviewBtn.addEventListener('click', closePreview);
+        
+        // Global Download Button Handler
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', () => {
+                const allFilesMap = new Map();
+                
+                // Iterate through all model messages to find code blocks
+                messageHistory.forEach(msg => {
+                    if (msg.role === 'model') {
+                        const files = parseCodeBlocks(msg.content);
+                        files.forEach(file => {
+                            // Overwrite with latest version of file
+                            allFilesMap.set(file.name, file);
+                        });
+                    }
+                });
+
+                const uniqueFiles = Array.from(allFilesMap.values());
+                
+                if (uniqueFiles.length === 0) {
+                    alert("No files to download found in the conversation.");
+                    return;
+                }
+                
+                downloadZip(uniqueFiles);
+            });
+        }
+
+        function getLatestWebCode() {
+            let html = '';
+            let css = '';
+            let js = '';
+
+            // Scan all code blocks in the message list
+            const codeBlocks = messagesList.querySelectorAll('pre code');
+            
+            codeBlocks.forEach(block => {
+                const classList = block.className;
+                const content = block.innerText;
+                
+                if (classList.includes('language-html') || classList.includes('language-xml')) {
+                    html = content;
+                } else if (classList.includes('language-css')) {
+                    css = content;
+                } else if (classList.includes('language-javascript') || classList.includes('language-js')) {
+                    js = content;
+                }
+            });
+
+            return { html, css, js };
+        }
+
+        // -----------------------------------------------------------------------------
+        // MAIN SUBMISSION HANDLER
+        // -----------------------------------------------------------------------------
+
+        async function handleSubmit() {
+            const text = promptInput.value.trim();
+            if (!text || isLoading) return;
+
+            // 1. Reset UI
+            promptInput.value = '';
+            promptInput.style.height = 'auto';
+            isLoading = true;
+            updateSendButton();
+            
+            emptyState.classList.add('hidden');
+            messagesList.classList.remove('hidden');
+            if (newChatBtn) newChatBtn.classList.remove('hidden');
+
+            // 2. Show User Message
+            appendMessage('user', text);
+            
+            // 3. Show Loader
+            loadingIndicator.classList.remove('hidden');
+            scrollToBottom();
+
+            // 4. Call API
+            try {
+                const response = await generateCode(text, useSearch);
+                appendMessage('model', response.text, response.sources);
+                
+                // Check if we should show preview button
+                const { html } = getLatestWebCode();
+                if (html) {
+                    togglePreviewButton(true);
+                }
+                
+                // Check if we should show download button
+                const latestFiles = parseCodeBlocks(response.text);
+                if (latestFiles.length > 0 || (downloadBtn && !downloadBtn.classList.contains('hidden'))) {
+                     toggleDownloadButton(true);
+                }
+                
+            } catch (error) {
+                console.error("Error details:", error);
+                
+                let errorMsg = `**Error**: ${error.message}`;
+                if (error.status === 429 || (error.message && error.message.includes("429"))) {
+                    errorMsg = "**Quota Exceeded**: The API is busy. Please wait a minute and try again.";
+                } else if (error.message.includes("API Key")) {
+                    errorMsg = "**API Key Missing**: Please open `index.html` and paste your Google GenAI API Key into the `window.API_KEY` section at the top.";
+                } else if (error.message.includes("Failed to fetch")) {
+                    errorMsg = "**Network Error**: Could not connect to Google GenAI. Please check your internet connection or API key.";
+                }
+                
+                appendMessage('model', errorMsg);
+            } finally {
+                isLoading = false;
+                loadingIndicator.classList.add('hidden');
+                updateSendButton();
+                scrollToBottom();
+            }
+        }
+
+        // -----------------------------------------------------------------------------
+        // DISPLAY HELPERS
+        // -----------------------------------------------------------------------------
+
+        function appendMessage(role, content, sources = []) {
+            // Save to history for Download feature
+            messageHistory.push({ role, content, sources });
+        
+            const div = document.createElement('div');
+            div.className = `flex gap-4 animate-fade-in ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+            
+            // Avatar
+            let avatarHtml = '';
+            if (role === 'model') {
+                avatarHtml = `
+                    <div class="flex-none w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-green-500 flex items-center justify-center mt-1 shadow-lg shadow-blue-900/20">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-white"></i>
+                    </div>`;
+            } else {
+                // Anonymous user avatar
+                avatarHtml = `
+                    <div class="flex-none w-8 h-8 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center mt-1 text-xs font-bold text-white">
+                        <i data-lucide="user" class="w-4 h-4 text-gray-400"></i>
+                    </div>`;
+            }
+
+            // Bubble
+            const bubbleClass = role === 'user' 
+                ? 'bg-blue-600/10 border border-blue-500/20 text-blue-50 rounded-tr-sm' 
+                : 'bg-gray-900 border border-gray-800 text-gray-100 rounded-tl-sm w-full';
+
+            // Parse Content
+            let innerContent = '';
+            if (role === 'user') {
+                innerContent = `<p class="whitespace-pre-wrap leading-relaxed">${escapeHtml(content)}</p>`;
+            } else {
+                innerContent = window.marked ? window.marked.parse(content) : content;
+            }
+
+            // Parse Sources
+            let sourcesHtml = '';
+            if (sources && sources.length > 0) {
+                sourcesHtml = `<div class="mt-3 flex flex-wrap gap-2 pt-2 border-t border-gray-800/50">`;
+                sources.forEach(src => {
+                    const hostname = new URL(src.uri).hostname;
+                    sourcesHtml += `
+                        <a href="${src.uri}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-full text-xs text-gray-400 hover:text-blue-400 transition-colors">
+                            <i data-lucide="arrow-up-right" class="w-3 h-3"></i>
+                            <span class="truncate max-w-[200px]">${hostname}</span>
+                        </a>
+                    `;
+                });
+                sourcesHtml += `</div>`;
+            }
+
+            // REMOVED: Per-message Download ZIP button logic
+
+            div.innerHTML = role === 'model' 
+                ? `${avatarHtml}<div class="flex flex-col max-w-[85%] items-start"><div class="rounded-2xl px-6 py-4 shadow-sm ${bubbleClass} markdown-body">${innerContent}</div>${sourcesHtml}</div>`
+                : `<div class="flex flex-col max-w-[85%] items-end"><div class="rounded-2xl px-6 py-4 shadow-sm ${bubbleClass}">${innerContent}</div></div>${avatarHtml}`;
+            
+            messagesList.appendChild(div);
+            
+            // Syntax Highlighting for Code Blocks
+            if (role === 'model' && window.hljs) {
+                div.querySelectorAll('pre code').forEach((block) => {
+                    window.hljs.highlightElement(block);
+                });
+            }
+
+            // Copy & Share Code Buttons (Only for model)
+            if (role === 'model') {
+                div.querySelectorAll('pre').forEach(pre => {
+                    // 1. Create Wrapper (Relative for button positioning)
+                    const wrapper = document.createElement('div');
+                    wrapper.className = "relative group";
+                    
+                    // 2. Wrap PRE element
+                    pre.parentNode.insertBefore(wrapper, pre);
+                    wrapper.appendChild(pre);
+                    
+                    // 3. Create Copy Button
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = "absolute top-2 right-2 p-2 bg-gray-800/80 border border-gray-700 text-gray-400 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-200 focus:opacity-100 hover:bg-gray-700 hover:text-white z-10 cursor-pointer";
+                    copyBtn.innerHTML = '<i data-lucide="copy" class="w-4 h-4"></i>';
+                    copyBtn.title = "Copy Code";
+                    
+                    // 4. Click Handler for Copy
+                    copyBtn.addEventListener('click', async () => {
+                        const code = pre.querySelector('code')?.innerText || pre.innerText;
+                        try {
+                            await navigator.clipboard.writeText(code);
+                            // Feedback
+                            copyBtn.innerHTML = '<i data-lucide="check" class="w-4 h-4 text-green-400"></i>';
+                            copyBtn.classList.add('border-green-500/50');
+                            if (window.lucide) window.lucide.createIcons();
+                            
+                            // Reset after 2s
+                            setTimeout(() => {
+                                copyBtn.innerHTML = '<i data-lucide="copy" class="w-4 h-4"></i>';
+                                copyBtn.classList.remove('border-green-500/50');
+                                if (window.lucide) window.lucide.createIcons();
+                            }, 2000);
+                        } catch (err) {
+                            console.error('Failed to copy', err);
+                        }
+                    });
+
+                    // 5. Create Share Button
+                    const shareBtn = document.createElement('button');
+                    shareBtn.className = "absolute top-2 right-14 p-2 bg-gray-800/80 border border-gray-700 text-gray-400 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-200 focus:opacity-100 hover:bg-gray-700 hover:text-white z-10 cursor-pointer";
+                    shareBtn.innerHTML = '<i data-lucide="share-2" class="w-4 h-4"></i>';
+                    shareBtn.title = "Share Snippet";
+
+                    // 6. Click Handler for Share
+                    shareBtn.addEventListener('click', async () => {
+                        const code = pre.querySelector('code')?.innerText || pre.innerText;
+                        let lang = '';
+                        pre.querySelector('code')?.classList.forEach(cls => {
+                            if(cls.startsWith('language-')) lang = cls.replace('language-', '');
+                        });
+
+                        try {
+                            if (!window.LZString) {
+                                console.error('LZString not loaded');
+                                return;
+                            }
+                            const payload = JSON.stringify({ code, lang });
+                            const compressed = window.LZString.compressToEncodedURIComponent(payload);
+                            const url = new URL(window.location.href);
+                            url.searchParams.set('share', compressed);
+                            
+                            await navigator.clipboard.writeText(url.toString());
+                            
+                            // Feedback
+                            const originalHTML = shareBtn.innerHTML;
+                            shareBtn.innerHTML = '<i data-lucide="link" class="w-4 h-4 text-blue-400"></i>';
+                            shareBtn.classList.add('border-blue-500/50');
+                            if (window.lucide) window.lucide.createIcons();
+                            
+                            setTimeout(() => {
+                                shareBtn.innerHTML = originalHTML;
+                                shareBtn.classList.remove('border-blue-500/50');
+                                if (window.lucide) window.lucide.createIcons();
+                            }, 2000);
+                        } catch (err) {
+                            console.error('Failed to share', err);
+                        }
+                    });
+                    
+                    wrapper.appendChild(copyBtn);
+                    wrapper.appendChild(shareBtn);
+                });
+            }
+            
+            // Refresh Icons (handles new buttons too)
+            if (window.lucide) window.lucide.createIcons();
+            
+            scrollToBottom();
+        }
+
+        // -----------------------------------------------------------------------------
+        // ZIP & DOWNLOAD HELPERS
+        // -----------------------------------------------------------------------------
+
+        function parseCodeBlocks(text) {
+            const files = [];
+            // Regex: 
+            // 1. ``` (start)
+            // 2. ([^ \t\n]*) -> Capture language (optional, but usually present. non-greedy? no, language has no spaces)
+            // 3. (?:[ \t]+([a-zA-Z0-9_./-]+))? -> Optional filename after space
+            // 4. .*?\n -> consume rest of the line (e.g. extra spaces)
+            // 5. ([\s\S]*?) -> content
+            // 6. ``` (end)
+            const regex = /```([^ \t\n]*)(?:[ \t]+([a-zA-Z0-9_./-]+))?.*?\n([\s\S]*?)```/g;
+            
+            let match;
+            let fileCounter = 1;
+
+            while ((match = regex.exec(text)) !== null) {
+                const lang = match[1] || 'txt';
+                let filename = match[2];
+                const content = match[3];
+                
+                // Skip if content is empty (sometimes happens with empty blocks)
+                if (!content || !content.trim()) continue;
+
+                // Determine filename if not provided
+                if (!filename) {
+                    const ext = getExtensionFromLang(lang);
+                    filename = `file_${fileCounter}.${ext}`;
+                    fileCounter++;
+                }
+
+                files.push({ name: filename, content: content.trim() });
+            }
+            return files;
+        }
+
+        function getExtensionFromLang(lang) {
+            const map = {
+                'javascript': 'js', 'js': 'js',
+                'typescript': 'ts', 'ts': 'ts',
+                'python': 'py', 'py': 'py',
+                'html': 'html', 'css': 'css',
+                'json': 'json', 'markdown': 'md', 'md': 'md',
+                'sql': 'sql', 'bash': 'sh', 'sh': 'sh', 'shell': 'sh'
+            };
+            return map[lang.toLowerCase()] || 'txt';
+        }
+
+        async function downloadZip(files) {
+            console.log("Attempting to download files:", files);
+            if (!window.JSZip) {
+                console.error("JSZip not loaded");
+                alert("Error: JSZip library not loaded. Cannot download files.");
+                return;
+            }
+
+            const zip = new JSZip();
+            files.forEach(file => {
+                zip.file(file.name, file.content);
+            });
+
+            try {
+                const content = await zip.generateAsync({ type: "blob" });
+                const url = URL.createObjectURL(content);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "codegenie_project.zip";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                console.log("Download started");
+            } catch (e) {
+                console.error("Failed to generate zip", e);
+                alert("Failed to generate ZIP file.");
+            }
+        }
+
+        function scrollToBottom() {
+            if (chatContainer) {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        if (modeExpertBtn) modeExpertBtn.addEventListener('click', () => setMode(false));
+        if (modeSearchBtn) modeSearchBtn.addEventListener('click', () => setMode(true));
+
+        function setMode(search) {
+            if (isLoading) return;
+            useSearch = search;
+            
+            if (!useSearch) {
+                modeExpertBtn.className = "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-all bg-blue-600/20 text-blue-300 border border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.15)]";
+                modeSearchBtn.className = "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-all text-gray-400 hover:text-gray-200 hover:bg-gray-800";
+                modeText.innerText = "expert";
+                promptInput.placeholder = "Ask for a Python API or a pure HTML/CSS login page...";
+            } else {
+                modeExpertBtn.className = "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-all text-gray-400 hover:text-gray-200 hover:bg-gray-800";
+                modeSearchBtn.className = "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-all bg-purple-600/20 text-purple-300 border border-purple-500/30 shadow-[0_0_10px_rgba(147,51,234,0.15)]";
+                modeText.innerText = "researched";
+                promptInput.placeholder = "Ask about backend libs (e.g., 'Best Node.js ORM?')";
+            }
+        }
+
+        if (newChatBtn) {
+            newChatBtn.addEventListener('click', () => {
+                // Clear UI
+                messagesList.innerHTML = '';
+                messagesList.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                newChatBtn.classList.add('hidden');
+                previewBtn.classList.add('hidden'); // Hide Preview on new chat
+                downloadBtn.classList.add('hidden'); // Hide Download on new chat
+                promptInput.value = '';
+                promptInput.style.height = 'auto';
+                
+                // Clear URL share param
+                const url = new URL(window.location.href);
+                url.searchParams.delete('share');
+                window.history.pushState({}, '', url);
+
+                // Reset Chat Session Logic
+                chatSession = null;
+                currentSessionMode = null;
+                messageHistory = []; // Clear history
+                
+                updateSendButton();
+            });
+        }
+
+        // -----------------------------------------------------------------------------
+        // AI API LOGIC
+        // -----------------------------------------------------------------------------
+
+        async function generateCode(prompt, useSearch) {
+          // Dynamic Import: Loads the SDK only when needed to prevent blocking UI
+          const { GoogleGenAI } = await import("@google/genai");
+
+          const apiKey = window.API_KEY || (window.process && window.process.env && window.process.env.API_KEY);
+          if (!apiKey) throw new Error("API Key is missing. Please check the top of index.html");
+          
+          const ai = new GoogleGenAI({ apiKey });
+          
+          // Use Flash model for speed and higher limits
+          const modelName = 'gemini-2.5-flash';
+
+          // Determine tool config
+          const currentMode = useSearch ? 'search' : 'expert';
+          
+          let tools = undefined;
+          if (useSearch) {
+            tools = [{ googleSearch: {} }];
+          }
+
+          const systemInstruction = `You are CodeGenie, a Full-Stack expert specializing in robust Backend Architecture and pure Vanilla Web Standards.
+
+CORE COMPETENCIES:
+1. **Backend Engineering**: Node.js (Express), Python (Flask/FastAPI), SQL.
+2. **Vanilla Frontend**: Pure HTML5, CSS3, JS.
+
+STRICT GENERATION RULES:
+- **NO TYPESCRIPT/REACT** unless explicitly asked.
+- **DEFAULT TO VANILLA**: Use standard \`index.html\`, \`style.css\`, and \`script.js\`.
+- **CODE BLOCKS**: Use markdown code blocks.
+- **FILE NAMES**: ALWAYS specify filenames in code blocks if possible (e.g., \`\`\`html index.html\`).
+- **QUALITY**: Write clean, modern, semantic code.
+
+${useSearch ? "You have access to Google Search." : "Use your expert internal knowledge."}`;
+
+          // INITIALIZE OR REUSE CHAT SESSION
+          // If session doesn't exist, or the mode (tools) changed, start a new chat.
+          if (!chatSession || currentSessionMode !== currentMode) {
+              console.log("Starting new chat session. Mode:", currentMode);
+              chatSession = ai.chats.create({
+                  model: modelName,
+                  config: {
+                    systemInstruction,
+                    tools: tools,
+                  },
+              });
+              currentSessionMode = currentMode;
+          }
+
+          // SEND MESSAGE TO CHAT
+          const response = await chatSession.sendMessage({
+              message: prompt
+          });
+
+          const text = response.text || "No response generated.";
+          
+          const sources = [];
+          const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+          if (chunks) {
+            chunks.forEach((chunk) => {
+              if (chunk.web) {
+                sources.push({
+                  title: chunk.web.title || "Web Source",
+                  uri: chunk.web.uri,
+                });
+              }
+            });
+          }
+
+          return { text, sources };
+        }
+    </script>
+</body>
+</html>
